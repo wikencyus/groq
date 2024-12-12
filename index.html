@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Bubble</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {
+      width: 400px;
+      height: 500px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 20px;
+      overflow-y: scroll;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-container {
+      display: flex;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-top: 1px solid #ddd;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 10px 15px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .user-message, .api-message {
+      max-width: 80%;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .user-message {
+      background-color: #d1f7d1;
+      align-self: flex-end;
+      border-top-right-radius: 0;
+    }
+
+    .api-message {
+      background-color: #f1f1f1;
+      align-self: flex-start;
+      border-top-left-radius: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-box" id="chatBox">
+      <!-- Chat messages will appear here -->
+    </div>
+    <div class="input-container">
+      <input type="text" id="userInput" placeholder="Type your message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // Ganti dengan API Key Anda
+    const API_KEY = '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';
+    const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+    const chatBox = document.getElementById('chatBox');
+    const userInput = document.getElementById('userInput');
+
+    // Fungsi untuk menampilkan pesan ke dalam chat
+    function displayMessage(message, role) {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add(role === 'user' ? 'user-message' : 'api-message');
+      messageElement.textContent = message;
+      chatBox.appendChild(messageElement);
+      chatBox.scrollTop = chatBox.scrollHeight; // Scroll ke bawah
+    }
+
+    // Fungsi untuk mengirim pesan ke API Groq
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      // Tampilkan pesan pengguna di chat
+      displayMessage(message, 'user');
+
+      // Kosongkan input
+      userInput.value = '';
+
+      try {
+        // Kirim pesan ke Groq API dengan format JSON
+        const response = await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gemma-7b-it", // Model yang digunakan
+            messages: [
+              {
+                role: "system",
+                content: "Kamu adalah asisten AI yang selalu membalas dalam bahasa Indonesia."
+              },
+              {
+                role: "user",
+                content: message,
+              }
+            ],
+          }),
+        });
+
+        // Jika status tidak OK (misalnya 404, 500)
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('API Error:', errorData);
+          displayMessage(`Error: ${response.status} - ${errorData.message || "Unknown error"}`, 'api');
+          return;
+        }
+
+        const data = await response.json();
+        if (data.choices && data.choices[0]?.message?.content) {
+          // Tampilkan respons dari API
+          displayMessage(data.choices[0]?.message?.content, 'api');
+        } else {
+          displayMessage("No response from API", 'api');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        displayMessage("Error connecting to Groq API", 'api');
+      }
+    }
+  </script>
+</body>
+</html>
